@@ -1,0 +1,39 @@
+const watchIsProd = watch('products')
+
+const [selectValue, setSelectValue] = useState<ISelectOption[]>([])
+
+useEffect(() => {
+    const selectValueCurrent = getValues('products')
+    const selectProduct = products?.filter(prod => prod?.prodId === selectValueCurrent)[0]
+    setSelectValue([{ label: selectProduct?.prodName, value: selectValueCurrent }])
+}, [watchIsProd])
+
+const selectProd = products?.map(prod => ({
+    label: prod?.prodName,
+    value: prod?.prodId
+}))
+
+const defaultProdct =  {
+    label: selectProd[0]?.label,
+    value: selectProd[0]?.value
+}
+
+<Controller control={control} 
+    name='products'
+    rules={{ required: false }}
+    render={({ field: { onChange, value }, fieldState: { error } }) => (
+        <SelectForm
+            options={selectProd}
+            error={error}
+            label='видимость'
+            inputSize='select-long'
+            defaultValue={!changeTab.main ? defaultProdct : selectValue[0]}
+            value={useGetSelectValue(value, selectProd)}
+            onChange={(newValue: SingleValue<string | ISelectOption>) => onChange((newValue as ISelectOption).value)}
+        />
+    )}
+/>
+
+export const useGetSelectValue = (value: string, options: ISelectOption[]) => {
+    return options?.find((option: ISelectOption) => option.value === value)
+}
