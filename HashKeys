@@ -1,0 +1,32 @@
+function stableStringify(item: any): string {
+    if (Array.isArray(item)) {
+        // Рекурсивно сериализуем и сортируем элементы
+        const normalized = item.map(stableStringify).sort();
+        return `[${normalized.join(',')}]`;
+    } else if (item && typeof item === 'object') {
+        // Сортируем ключи объектов по алфавиту
+        const keys = Object.keys(item).sort();
+        const normalized = keys.map(k => `"${k}":${stableStringify(item[k])}`);
+        return `{${normalized.join(',')}}`;
+    } else {
+        // Примитивы просто сериализуем
+        return JSON.stringify(item);
+    }
+}
+
+function simpleHash(str: string): number {
+    // Очень простой hash для демонстрации
+    let hash = 0, i, chr;
+    if (str.length === 0) return hash;
+    for (i = 0; i < str.length; i++) {
+        chr = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + chr;
+        hash |= 0; // Преобразование в 32битное целое
+    }
+    return hash;
+}
+
+export function arrayHash(arr: any[]): number {
+    const normalized = stableStringify(arr);
+    return simpleHash(normalized);
+}
