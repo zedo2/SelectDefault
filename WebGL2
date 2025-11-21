@@ -1,9 +1,12 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
+// Импорт OrbitControls из three/examples
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-function CarWithDoor() {
+function CarWithInteractiveDoor() {
   const mountRef = useRef(null);
   const doorRef = useRef(null);
+  const controlsRef = useRef(null);
   const [doorOpen, setDoorOpen] = useState(false);
 
   useEffect(() => {
@@ -19,10 +22,17 @@ function CarWithDoor() {
     renderer.setSize(width, height);
     mountRef.current.appendChild(renderer.domElement);
 
-    // Машина
+    // OrbitControls для управления мышкой
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controlsRef.current = controls;
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.1;
+    controls.minDistance = 20;
+    controls.maxDistance = 100;
+
     const car = new THREE.Group();
 
-    // Колёса (пример)
+    // Колёса
     function createWheel() {
       const geometry = new THREE.CylinderGeometry(4, 4, 2, 32);
       const material = new THREE.MeshStandardMaterial({ color: 0x333333 });
@@ -47,7 +57,7 @@ function CarWithDoor() {
     frontRightWheel.position.set(15, 4, -10);
     car.add(frontRightWheel);
 
-    // Корпус машины
+    // Корпус
     const bodyGeometry = new THREE.BoxGeometry(40, 10, 20);
     const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
@@ -61,23 +71,18 @@ function CarWithDoor() {
     cabin.position.set(0, 15, 0);
     car.add(cabin);
 
-    // Дверь (выделяем отдельно, чтобы вращать)
+    // Дверь (с возможностью открыть/закрыть)
     const doorGeometry = new THREE.BoxGeometry(10, 8, 1);
     const doorMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
     const door = new THREE.Mesh(doorGeometry, doorMaterial);
-
-    // Точка вращения двери с левого края (шарнир)
-    // Смещаем дверь так, чтобы вращение шло относительно края двери
-    door.geometry.translate(5, 0, 0); 
-    door.position.set(-10, 15, 10); 
-
-    doorRef.current = door; // сохраняем ссылку для управления
-
+    door.geometry.translate(5, 0, 0); // смещение для шарнира
+    door.position.set(-10, 15, 10);
+    doorRef.current = door;
     car.add(door);
 
     scene.add(car);
 
-    // Освещение
+    // Свет
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
 
@@ -85,33 +90,28 @@ function CarWithDoor() {
     directionalLight.position.set(50, 50, 50);
     scene.add(directionalLight);
 
-    // Анимация
-    let animationFrameId;
-    function animate() {
-      animationFrameId = requestAnimationFrame(animate);
+    // Анимация с обновлением OrbitControls
+    const animate = () => {
+      requestAnimationFrame(animate);
+      controls.update();
       renderer.render(scene, camera);
-    }
+    };
     animate();
 
-    // Очистка при размонтировании
     return () => {
-      cancelAnimationFrame(animationFrameId);
       mountRef.current.removeChild(renderer.domElement);
       scene.clear();
       renderer.dispose();
+      controls.dispose();
     };
   }, []);
 
-  // Управление дверью через состояние React
+  // Реагируем на открытие и закрытие двери
   useEffect(() => {
     if (!doorRef.current) return;
     const door = doorRef.current;
-
-    // Цель открытия двери - повернуть на примерно 70 градусов по оси Y
-    const openAngle = Math.PI / 2.6; // 70 градусов
-    // Частичное упрощение анимации - мгновенно меняем угол
-    // Можно добавить плавную анимацию по времени через requestAnimationFrame
-    
+    const openAngle = Math.PI / 2.6;
+    // простой моментальный поворот (можно плавно доработать)
     door.rotation.y = doorOpen ? openAngle : 0;
   }, [doorOpen]);
 
@@ -125,4 +125,4 @@ function CarWithDoor() {
   );
 }
 
-export default CarWithDoor;
+export default CarWithInteractiveDoor;
