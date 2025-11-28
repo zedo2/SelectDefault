@@ -1,0 +1,53 @@
+export const apiFetch = async (input: RequestInfo, init?: RequestInit): Promise<Response> => {
+  const request = new Request(input, init);
+  const token = getAccessToken();
+  
+  if (token) request.headers.set('Authorization', `Bearer ${token}`);
+  
+  const response = await fetch(request);
+  
+  // 401 + не retry → запускаем refresh
+  if (response.status === 401 && !request.headers.has('X-Retry')) {
+    if (isRefreshing) {
+      // Ждем refresh от другого запроса
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      }).then((newToken) => {
+        request.headers.set('X-Retry', 'true');
+        request.headers.set('Authorization', `Bearer ${newToken}`);
+        return fetch(request);
+      }).catch(err => Promise.reject(err));
+    }
+    
+    // Первый запрос запускает refresh
+    request.headers.set('X-Retry', 'true');
+    isRefreshing = true;
+    
+    try {
+      const refreshResponse = await fetch('/api/auth/refresh', {
+        credentials: 'include', // для HttpOnly cookies
+        headers: { 'X-Refresh': 'true' }
+      });
+      
+      if (!refreshResponse.ok) throw new Error('Refresh failed');
+      
+      const { access_token } = await refreshResponse.json();
+      setAccessToken(access_token); // в память
+      
+      processQueue(null, access_token);
+      
+      // Retry оригинальный запрос
+      request.headers.set('Authorization', `Bearer ${access_token}`);
+      return fetch(request);
+    } catch (refreshError) {
+      processQueue(refreshError, null);
+      // logout
+      window.location.href = '/login';
+      throw refreshError;
+    } finally {
+      isRefreshing = false;
+    }
+  }
+  
+  return response;
+};
