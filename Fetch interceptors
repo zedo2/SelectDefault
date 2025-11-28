@@ -1,0 +1,32 @@
+// auth.service.ts
+interface PendingRequest {
+  resolve: (value: any) => void;
+  reject: (error: any) => void;
+}
+
+let isRefreshing = false;
+let failedQueue: PendingRequest[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) reject(error);
+    else resolve(token);
+  });
+  failedQueue = [];
+};
+
+export const authenticatedFetch = async (input: RequestInfo, init?: RequestInit): Promise<Response> => {
+  const request = new Request(input, init);
+  
+  // Добавляем Authorization если токен есть
+  const token = getAccessToken(); // из памяти/localStorage
+  if (token) {
+    request.headers.set('Authorization', `Bearer ${token}`);
+  }
+  
+  try {
+    return await fetch(request);
+  } catch (error) {
+    throw error;
+  }
+};
