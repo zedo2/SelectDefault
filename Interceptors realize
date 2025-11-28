@@ -1,13 +1,11 @@
 export const apiFetch = async (input: RequestInfo, init?: RequestInit): Promise<Response> => {
-  const request = new Request(input, init);
-  //везде кроме первого вызова заменить на копию
-  const requestCopy = new Request(input, init);
+  const request = new Request(input, init) 
   const token = getAccessToken();
   
   if (token) request.headers.set('Authorization', `Bearer ${token}`);
 
   //первый вызов
-  const response = await fetch(request);
+  const response = await fetch(request.clone());
   
   // 401 + не retry → запускаем refresh
   if (response.status === 401 && !request.headers.has('X-Retry')) {
@@ -16,7 +14,7 @@ export const apiFetch = async (input: RequestInfo, init?: RequestInit): Promise<
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
       }).then((newToken) => {
-        requestCopy.headers.set('X-Retry', 'true');
+        request.headers.set('X-Retry', 'true');
         request.headers.set('Authorization', `Bearer ${newToken}`);
         return fetch(requestCopy);
       }).catch(err => Promise.reject(err));
